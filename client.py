@@ -9,12 +9,16 @@ img2 = DocumentArray.from_files('./img/*.png')
 for i in img2:
     i = i.load_uri_to_image_tensor()
 
+img3 = DocumentArray.from_files('./img/img.png')
+for i in img3:
+    i = i.load_uri_to_image_tensor()
+
 da = DocumentArray(
-    [Document(text='happy', matches=img1),
-     Document(text='angry', matches=img1),
-     Document(text='sky',matches=img2)]
+    [Document(text='angry', matches=img1),
+     Document(text='sea', matches=img2),
+     Document(text='sky',matches=img3)]
 )
-client = Client(port=56349)
+client = Client(port=59181)
 responses = client.post(on='/rank', inputs=da)
 for response in responses:
     print(response.text)

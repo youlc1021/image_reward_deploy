@@ -15,14 +15,16 @@ class TextReward(Executor):
         for doc in docs:
             self._rank(doc)
             doc.matches = sorted(doc.matches, key=lambda _s:_s.scores['rank'].value)
-        return docs
 
     def _rank(self, doc: Document):
         img = []
+        for i in doc.matches:
+            img.append(Image.fromarray(i.tensor))
         with torch.no_grad():
-            for i in doc.matches:
-                img.append(Image.fromarray(i.tensor))
             ranking, rewards = self.model.inference_rank(doc.text, img)
+        if len(doc.matches) == 1:
+            doc.matches[0].scores['rank'].value, doc.matches[0].scores['reward'].value = ranking, rewards
+        else:
             j = 0
             for i in doc.matches:
                 i.scores['rank'].value, i.scores['reward'].value = ranking[j], rewards[j]
