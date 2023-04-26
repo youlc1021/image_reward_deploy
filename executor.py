@@ -1,11 +1,8 @@
-import os.path
-
 import ImageReward as RM
 import torch
 from jina import Executor, requests, DocumentArray
 from docarray import Document
 from PIL import Image
-import numpy as np
 
 
 class TextReward(Executor):
@@ -15,21 +12,18 @@ class TextReward(Executor):
 
     @requests(on='/rank')
     def rank(self, docs: DocumentArray, **kwargs):
-        # for d in docs
-        ranking, rewards = self._rank(docs)
-        ranking = np.array(ranking)
-        rewards = np.array(rewards)
-        return DocumentArray([Document(tensor=ranking),Document(tensor=rewards)])
+        for doc in docs:
+            self._rank(doc)
+            doc.matches = sorted(doc.matches, key=lambda _s:_s.scores['rank'].value)
+        return docs
 
-    def _rank(self, docs:DocumentArray):
-        rnk, rwd = [], []
+    def _rank(self, doc: Document):
         img = []
         with torch.no_grad():
-            for i in docs['@m']:
-                i = Image.fromarray(i.tensor)
-                img.append(i)
-            print(docs['@r'][0].text)
-            ranking, rewards = self.model.inference_rank(docs['@r'][0].text, img)
-            rnk.append(ranking)
-            rwd.append(rewards)
-        return ranking, rewards
+            for i in doc.matches:
+                img.append(Image.fromarray(i.tensor))
+            ranking, rewards = self.model.inference_rank(doc.text, img)
+            j = 0
+            for i in doc.matches:
+                i.scores['rank'].value, i.scores['reward'].value = ranking[j], rewards[j]
+                j += 1

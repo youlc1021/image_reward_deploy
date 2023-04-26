@@ -1,20 +1,22 @@
-from docarray import  Document
+from docarray import Document
 from jina import Client, DocumentArray
-import numpy as np
-import os
-import glob
 
-img = DocumentArray.from_files('./img/*.jpg')
-for i in img:
+img1 = DocumentArray.from_files('./img/*.jpg')
+for i in img1:
+    i = i.load_uri_to_image_tensor()
+
+img2 = DocumentArray.from_files('./img/*.png')
+for i in img2:
     i = i.load_uri_to_image_tensor()
 
 da = DocumentArray(
-    [Document(text='This is a photo of a pumpkin',matches=img)]
+    [Document(text='happy', matches=img1),
+     Document(text='angry', matches=img1),
+     Document(text='sky',matches=img2)]
 )
-client = Client(port=50847)
-response = client.post(on='/rank', inputs=da)
-print('rank:', response[0].tensor)
-print('rewards:', response[1].tensor)
-
-# c = np.stack((response[0].tensor, response[1].tensor),axis=1)
-# print(c)
+client = Client(port=56349)
+responses = client.post(on='/rank', inputs=da)
+for response in responses:
+    print(response.text)
+    for i in response.matches:
+        print(f"%2d  %.3f  %s" % (i.scores['rank'].value, i.scores['reward'].value, i.uri))
